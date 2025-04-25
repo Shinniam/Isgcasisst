@@ -1,39 +1,49 @@
+// app/page.tsx
 'use client'
 
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 export default function Home() {
-  const [query, setQuery] = useState('')
   const router = useRouter()
+  const [query, setQuery] = useState('')
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (query.trim()) {
-      router.push(`/search?q=${encodeURIComponent(query)}`)
-    }
+    if (!query.trim()) return
+
+    const encoded = encodeURIComponent(query.trim())
+    router.push(`/search?q=${encoded}`)
   }
 
   return (
-    <main className="flex flex-col items-center justify-center h-screen px-4">
-      <h1 className="text-5xl font-bold text-blue-600 mb-8">Kimutichan</h1>
-      <form onSubmit={handleSearch} className="w-full max-w-xl">
+    <main className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-gray-900 transition-colors duration-300">
+      <h1 className="text-4xl font-semibold text-gray-800 dark:text-white mb-8">
+        Kimutichan Search
+      </h1>
+
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-xl flex items-center border rounded-full shadow-lg overflow-hidden bg-white dark:bg-gray-800"
+      >
         <input
           type="text"
+          className="flex-grow px-6 py-4 text-lg text-gray-900 dark:text-white bg-transparent outline-none"
+          placeholder="検索ワード または URL を入力..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="検索ワードを入力..."
-          className="w-full p-4 border border-gray-300 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <div className="mt-4">
-          <button
-            type="submit"
-            className="px-6 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition"
-          >
-            検索
-          </button>
-        </div>
+        <button
+          type="submit"
+          className="px-6 py-4 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors"
+        >
+          検索
+        </button>
       </form>
+
+      <p className="mt-6 text-sm text-gray-500 dark:text-gray-400">
+        Powered by Kimutichan / No external APIs
+      </p>
     </main>
   )
 }
