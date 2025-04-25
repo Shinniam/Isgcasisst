@@ -17,19 +17,21 @@ export async function GET(req: NextRequest) {
     const res = await fetch(target, {
       headers: {
         'User-Agent': 'Mozilla/5.0 Kimutichan/1.0 (compatible)',
+        'Accept-Encoding': 'gzip, deflate, br',
       },
       redirect: 'follow',
     })
 
     const contentType = res.headers.get('content-type') || ''
     const buffer = await res.arrayBuffer()
-
-    // とりあえず UTF-8 として読み込む（理想は iconv-lite だけど Vercel Edge では使えない）
     let text = new TextDecoder('utf-8').decode(buffer)
 
-    // charset=修正（仮）→ meta charset を強制的に utf-8 に書き換え
+    // HTML確認とcharset修正
     if (contentType.includes('text/html')) {
       text = fixCharset(text)
+      if (!text.includes('<html')) {
+        text = `<html><body><h1>このページはJavaScriptで描画されるため、現在の環境では表示できません。</h1></body></html>`
+      }
     }
 
     return new Response(text, {
