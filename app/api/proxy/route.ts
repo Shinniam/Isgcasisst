@@ -3,6 +3,18 @@ import { NextRequest } from 'next/server';
 
 export const runtime = 'edge';
 
+// 簡易charset検出
+function detectCharset(contentType: string, text: string): string {
+  const metaMatch = text.match(/<meta[^>]*charset=["']?([\w-]+)["']?/i);
+  if (metaMatch) {
+    return metaMatch[1].toLowerCase();
+  }
+  if (contentType.includes('charset=')) {
+    return contentType.split('charset=')[1].toLowerCase();
+  }
+  return 'utf-8';
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const target = searchParams.get('url');
@@ -19,11 +31,23 @@ export async function GET(req: NextRequest) {
     });
 
     const contentType = res.headers.get('content-type') || 'text/html; charset=utf-8';
-    const data = await res.text();
+    const arrayBuffer = await res.arrayBuffer();
+    const rawText = new TextDecoder('utf-8').decode(arrayBuffer);
+    const charset = detectCharset(contentType, rawText);
 
-    return new Response(data, {
+    let finalText = rawText;
+
+    if (charset !== 'utf-8') {
+      // <meta charset>を書き換え
+      finalText = rawText.replace(
+        /<meta[^>]*charset=["']?[\w-]+["']?/i,
+        '<meta charset="utf-8"'
+      );
+    }
+
+    return new Response(finalText, {
       headers: {
-        'Content-Type': contentType,
+        'Content-Type': 'text/html; charset=utf-8',
         'Cache-Control': 's-maxage=300, stale-while-revalidate=600',
       },
     });
