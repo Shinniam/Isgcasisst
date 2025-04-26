@@ -5,48 +5,30 @@ export const runtime = 'edge';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const q = searchParams.get('q');
+  const query = searchParams.get('q');
 
-  if (!q) {
+  if (!query) {
     return new Response(JSON.stringify({ results: [] }), {
       headers: { 'Content-Type': 'application/json' },
+      status: 400,
     });
   }
 
-  const proxyURL = `https://your-domain.vercel.app/api/proxy?url=https://www.bing.com/search?q=${encodeURIComponent(q)}`;
+  // 仮のダミーデータを返す（本物の検索エンジン組み込みは後で！）
+  const results = [
+    {
+      title: `${query} に関する情報`,
+      url: 'https://example.com',
+      snippet: `${query} についてのサンプル説明文です。`,
+    },
+    {
+      title: `${query} をもっと知る`,
+      url: 'https://example.org',
+      snippet: `${query} に関連する追加情報。`,
+    },
+  ];
 
-  try {
-    const htmlRes = await fetch(proxyURL, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 Kimutichan/1.0',
-      },
-    });
-    const html = await htmlRes.text();
-
-    const results = parseSearchResults(html);
-    return new Response(JSON.stringify({ results }), {
-      headers: { 'Content-Type': 'application/json' },
-    });
-  } catch (e) {
-    return new Response(JSON.stringify({ error: (e as Error).message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-}
-
-function parseSearchResults(html: string): { title: string; description: string; url: string }[] {
-  const results: { title: string; description: string; url: string }[] = [];
-  const parser = /<li class="b_algo">[\s\S]*?<h2><a href="(.*?)"[^>]*>(.*?)<\/a><\/h2>[\s\S]*?<p>(.*?)<\/p>/g;
-
-  let match;
-  while ((match = parser.exec(html)) !== null) {
-    results.push({
-      url: decodeURIComponent(match[1]),
-      title: match[2].replace(/<[^>]+>/g, ''),
-      description: match[3].replace(/<[^>]+>/g, ''),
-    });
-  }
-
-  return results;
+  return new Response(JSON.stringify({ results }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
 }
