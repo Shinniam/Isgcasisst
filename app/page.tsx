@@ -2,64 +2,40 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
-  const handleSearch = async () => {
-    if (!query.trim()) return;
-    setLoading(true);
-
-    try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-      const json = await res.json();
-      setResults(json.results || []);
-    } catch (e) {
-      console.error(e);
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (query.trim()) {
+      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
     }
-
-    setLoading(false);
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-start p-8 bg-gray-50">
-      <h1 className="text-4xl font-bold mb-8 mt-12 text-center">Kimutichan Search</h1>
-
-      <div className="w-full max-w-2xl">
-        <div className="flex">
+    <div className="flex flex-col min-h-screen bg-white">
+      <header className="p-4 text-center text-lg font-bold text-gray-700">Kimutichan Search</header>
+      <main className="flex flex-1 flex-col items-center justify-center">
+        <form onSubmit={handleSearch} className="w-full max-w-md flex flex-col items-center">
           <input
             type="text"
-            placeholder="検索ワードを入力..."
+            className="w-full p-3 border border-gray-300 rounded-full text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-400"
+            placeholder="検索..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full p-4 rounded-l-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 text-lg"
           />
           <button
-            onClick={handleSearch}
-            className="p-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-r-xl text-lg"
+            type="submit"
+            className="mt-4 px-6 py-2 rounded-full bg-green-400 text-white hover:bg-green-500 transition"
           >
             検索
           </button>
-        </div>
-      </div>
-
-      {loading && <div className="mt-8 text-gray-600">検索中...</div>}
-
-      <div className="w-full max-w-2xl mt-8 space-y-6">
-        {results.map((item, index) => (
-          <div
-            key={index}
-            className="bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition"
-          >
-            <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-xl font-semibold text-blue-600 hover:underline">
-              {item.title || item.url}
-            </a>
-            <p className="text-gray-700 mt-2">{item.snippet}</p>
-          </div>
-        ))}
-      </div>
-    </main>
+        </form>
+      </main>
+      <footer className="p-4 text-center text-xs text-gray-400">© 2025 Kimutichan</footer>
+    </div>
   );
 }
