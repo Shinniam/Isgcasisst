@@ -1,38 +1,46 @@
-// app/api/search/route.ts
+// app/api/proxy/route.ts
 import { NextRequest } from 'next/server';
+import { detectCharset } from '@/lib/charset'; // charset検出ライブラリ
 
-export const runtime = 'edge'; // Edge Functionsで超高速！
+export const runtime = 'edge'; // Edge Functions
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const query = searchParams.get('q');
+  const targetUrl = searchParams.get('url');
 
-  if (!query) {
-    return new Response(JSON.stringify({ results: [] }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  if (!targetUrl) {
+    return new Response('Missing url', { status: 400 });
   }
 
   try {
-    // ここで直接Googleなどにアクセスするとまずいので、
-    // 代わりに kimu.vercel.app みたいな自前プロキシサーバーに飛ばす。
-    const proxyUrl = `https://your-proxy.vercel.app/api/proxy?url=https://www.google.com/search?q=${encodeURIComponent(query)}`;
-
-    const proxyRes = await fetch(proxyUrl);
-    const html = await proxyRes.text();
-
-    // 簡単にリンクだけ抽出
-    const urls = Array.from(html.matchAll(/href="(https?:\/\/[^"]+)"/g)).map(m => m[1]);
-
-    return new Response(JSON.stringify({ results: urls.slice(0, 10) }), {
-      headers: { 'Content-Type': 'application/json' },
+    const res = await fetch(targetUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 Kimutichan/1.0',
+      },
     });
 
-  } catch (e) {
-    return new Response(JSON.stringify({ results: [] }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
+    const contentType = res.headers.get('content-type') || '';
+    const arrayBuffer = await res.arrayBuffer();
+    const rawText = new TextDecoder('utf-8').decode(arrayBuffer);
+    const charset = detectCharset(contentType, rawText);
+
+    let finalText = rawText;
+    if (charset !== 'utf-8') {
+      // metaタグのcharsetを書き換える（超重要）
+      finalText = rawText.replace(
+        /<meta[^>]*charset=["']?[\w\-]+["']?/i,
+        '<meta charset="utf-8"'
+      );
+    }
+
+    return new Response(finalText, {
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 's-maxage=300, stale-while-revalidate=600',
+      },
     });
+  } catch (error) {
+    return new Response('Error fetching target: ' + (error as Error).message, { status: 500 });
   }
 }
+
